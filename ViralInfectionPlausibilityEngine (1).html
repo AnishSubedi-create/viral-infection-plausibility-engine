@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Viral Infection Plausibility Engine</title>
+<style>
+  :root {
+    --bg: #0a0f1e;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --surface3: #1e2d45;
+    --border: #1e3a5f;
+    --teal: #0d9488;
+    --mint: #5eead4;
+    --amber: #f59e0b;
+    --coral: #f97316;
+    --red: #dc2626;
+    --green: #22c55e;
+    --lav: #818cf8;
+    --white: #f1f5f9;
+    --muted: #64748b;
+    --light: #cbd5e1;
+    --font: 'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--white); font-family: var(--font);
+         min-height: 100vh; font-size: 14px; line-height: 1.6; }
+
+  /* ── Header ── */
+  .header { background: linear-gradient(135deg, #0d1b2e 0%, #0a1628 100%);
+             border-bottom: 1px solid var(--border); padding: 1.5rem 2rem;
+             display: flex; align-items: center; justify-content: space-between; }
+  .header-left { display: flex; align-items: center; gap: 1rem; }
+  .logo { width: 42px; height: 42px; background: var(--teal); border-radius: 10px;
+          display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .header h1 { font-size: 1.25rem; font-weight: 600; color: var(--white); }
+  .header p { font-size: 0.78rem; color: var(--muted); }
+  .badge { background: rgba(13,148,136,0.15); border: 1px solid var(--teal);
+           color: var(--mint); padding: 4px 12px; border-radius: 20px; font-size: 11px;
+           font-weight: 600; letter-spacing: 0.5px; }
+
+  /* ── Layout ── */
+  .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+  @media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  /* ── Cards ── */
+  .card { background: var(--surface); border: 1px solid var(--border);
+          border-radius: 14px; padding: 1.5rem; }
+  .card-accent-teal { border-top: 3px solid var(--teal); }
+  .card-accent-amber { border-top: 3px solid var(--amber); }
+  .card-accent-green { border-top: 3px solid var(--green); }
+  .card-accent-lav   { border-top: 3px solid var(--lav); }
+  .card h3 { font-size: 0.85rem; font-weight: 600; text-transform: uppercase;
+             letter-spacing: 0.8px; color: var(--muted); margin-bottom: 1rem; }
+  .card h2 { font-size: 1.1rem; font-weight: 600; color: var(--white); margin-bottom: 0.5rem; }
+
+  /* ── Form ── */
+  .search-section { background: var(--surface); border: 1px solid var(--border);
+                    border-radius: 16px; padding: 2rem; margin-bottom: 2rem; }
+  .search-title { font-size: 1.1rem; font-weight: 600; color: var(--white);
+                  margin-bottom: 0.4rem; }
+  .search-sub { font-size: 0.82rem; color: var(--muted); margin-bottom: 1.5rem; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem;
+              align-items: end; }
+  @media (max-width: 700px) { .form-row { grid-template-columns: 1fr; } }
+  .form-group label { display: block; font-size: 0.8rem; font-weight: 600;
+                      color: var(--muted); margin-bottom: 6px; text-transform: uppercase;
+                      letter-spacing: 0.6px; }
+  .form-group input, .form-group select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 14px; color: var(--white);
+    font-size: 0.9rem; font-family: var(--font); outline: none;
+    transition: border-color 0.2s; }
+  .form-group input:focus, .form-group select:focus { border-color: var(--teal); }
+  .form-group input::placeholder { color: var(--muted); }
+  .form-group select option { background: var(--surface2); }
+  .btn-run { background: var(--teal); border: none; border-radius: 10px;
+             padding: 11px 28px; color: white; font-size: 0.9rem; font-weight: 600;
+             cursor: pointer; transition: all 0.2s; white-space: nowrap;
+             display: flex; align-items: center; gap: 8px; }
+  .btn-run:hover { background: #0f766e; transform: translateY(-1px); }
+  .btn-run:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .quick-examples { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 1rem; }
+  .example-chip { background: var(--surface2); border: 1px solid var(--border);
+                  border-radius: 20px; padding: 5px 14px; font-size: 0.78rem;
+                  color: var(--light); cursor: pointer; transition: all 0.15s; }
+  .example-chip:hover { border-color: var(--teal); color: var(--mint); }
+
+  /* ── Progress ── */
+  .progress-section { display: none; background: var(--surface); border: 1px solid var(--border);
+                       border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem; }
+  .progress-steps { display: flex; gap: 0; margin-bottom: 1.5rem; }
+  .step { flex: 1; display: flex; flex-direction: column; align-items: center;
+          position: relative; }
+  .step::after { content: ''; position: absolute; top: 15px; left: 50%; width: 100%;
+                 height: 2px; background: var(--border); z-index: 0; }
+  .step:last-child::after { display: none; }
+  .step-circle { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--border);
+                 background: var(--surface2); display: flex; align-items: center;
+                 justify-content: center; font-size: 11px; font-weight: 600;
+                 z-index: 1; transition: all 0.3s; color: var(--muted); }
+  .step.active .step-circle { border-color: var(--teal); background: var(--teal); color: white; }
+  .step.done .step-circle { border-color: var(--green); background: var(--green); color: white; }
+  .step-label { font-size: 0.7rem; color: var(--muted); margin-top: 6px; text-align: center; }
+  .step.active .step-label { color: var(--mint); }
+  .progress-log { font-family: 'Courier New', monospace; font-size: 0.78rem;
+                  color: var(--mint); background: #050c18; border-radius: 8px;
+                  padding: 1rem; max-height: 150px; overflow-y: auto; }
+  .log-line { margin-bottom: 3px; }
+  .log-line::before { content: '▶ '; color: var(--teal); }
+
+  /* ── Results ── */
+  .results-section { display: none; }
+  .section-title { font-size: 1rem; font-weight: 700; color: var(--white);
+                   margin: 2rem 0 1rem; display: flex; align-items: center; gap: 8px; }
+  .section-title span { font-size: 0.75rem; font-weight: 500; color: var(--muted);
+                        background: var(--surface2); padding: 2px 10px; border-radius: 10px; }
+
+  /* ── Confidence Score ── */
+  .confidence-card { background: var(--surface); border: 1px solid var(--border);
+                     border-radius: 16px; padding: 2rem; margin-bottom: 2rem;
+                     display: flex; align-items: center; gap: 2rem; }
+  @media (max-width: 600px) { .confidence-card { flex-direction: column; } }
+  .score-circle { width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+                  display: flex; flex-direction: column; align-items: center;
+                  justify-content: center; font-weight: 700; position: relative; }
+  .score-number { font-size: 2.2rem; line-height: 1; }
+  .score-label  { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
+  .score-grade  { font-size: 0.85rem; font-weight: 700; margin-top: 2px; }
+  .confidence-details { flex: 1; }
+  .confidence-details h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .confidence-details p { font-size: 0.85rem; color: var(--light); line-height: 1.7; }
+  .score-bars { margin-top: 1rem; display: flex; flex-direction: column; gap: 8px; }
+  .score-bar-row { display: flex; align-items: center; gap: 10px; }
+  .score-bar-label { font-size: 0.75rem; color: var(--muted); width: 160px; flex-shrink: 0; }
+  .score-bar-track { flex: 1; height: 6px; background: var(--surface2);
+                     border-radius: 3px; overflow: hidden; }
+  .score-bar-fill  { height: 100%; border-radius: 3px; transition: width 1s ease; }
+  .score-bar-val   { font-size: 0.72rem; color: var(--muted); width: 35px; text-align: right; }
+
+  /* ── Receptor table ── */
+  .receptor-grid { display: flex; flex-direction: column; gap: 8px; }
+  .receptor-row { background: var(--surface2); border-radius: 10px; padding: 12px 16px;
+                  display: grid; grid-template-columns: 30px 1fr 80px 90px 120px;
+                  align-items: center; gap: 12px; border: 1px solid transparent;
+                  transition: border-color 0.2s; }
+  .receptor-row:hover { border-color: var(--teal); }
+  .receptor-row.known { border-left: 3px solid var(--green); }
+  .receptor-rank { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+  .receptor-name { font-size: 0.88rem; font-weight: 600; color: var(--white); }
+  .receptor-context { font-size: 0.73rem; color: var(--muted); white-space: nowrap;
+                      overflow: hidden; text-overflow: ellipsis; }
+  .receptor-score { font-size: 0.8rem; color: var(--mint); text-align: center; }
+  .receptor-badge { padding: 3px 10px; border-radius: 12px; font-size: 0.7rem;
+                    font-weight: 600; text-align: center; }
+  .badge-known    { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .badge-candidate{ background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.25); }
+  .receptor-link  { font-size: 0.72rem; }
+  .receptor-link a { color: var(--lav); text-decoration: none; }
+  .receptor-link a:hover { text-decoration: underline; }
+
+  /* ── Mechanism section ── */
+  .mechanism-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 700px) { .mechanism-grid { grid-template-columns: 1fr; } }
+  .mech-card { background: var(--surface); border: 1px solid var(--border);
+               border-radius: 12px; padding: 1.25rem; }
+  .mech-card h4 { font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+                  letter-spacing: 0.6px; margin-bottom: 0.75rem; }
+  .mech-list { list-style: none; }
+  .mech-list li { font-size: 0.83rem; color: var(--light); padding: 5px 0;
+                  border-bottom: 1px solid rgba(255,255,255,0.04);
+                  display: flex; align-items: flex-start; gap: 8px; }
+  .mech-list li::before { content: '→'; color: var(--teal); flex-shrink: 0; margin-top: 1px; }
+  .mech-list li:last-child { border-bottom: none; }
+
+  /* ── Papers ── */
+  .paper-item { background: var(--surface2); border-radius: 10px; padding: 14px 16px;
+                margin-bottom: 8px; border-left: 3px solid var(--border);
+                transition: border-color 0.2s; }
+  .paper-item:hover { border-color: var(--teal); }
+  .paper-title { font-size: 0.87rem; font-weight: 600; color: var(--white);
+                 margin-bottom: 4px; line-height: 1.4; }
+  .paper-meta  { font-size: 0.75rem; color: var(--muted); }
+  .paper-meta a { color: var(--lav); text-decoration: none; }
+  .paper-meta a:hover { text-decoration: underline; }
+
+  /* ── Stats row ── */
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+              margin-bottom: 2rem; }
+  @media (max-width: 700px) { .stat-row { grid-template-columns: 1fr 1fr; } }
+  .stat-card { background: var(--surface); border: 1px solid var(--border);
+               border-radius: 12px; padding: 1.25rem; text-align: center; }
+  .stat-num  { font-size: 1.8rem; font-weight: 700; }
+  .stat-lbl  { font-size: 0.72rem; color: var(--muted); text-transform: uppercase;
+               letter-spacing: 0.5px; margin-top: 2px; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 4px; background: var(--surface2); border-radius: 10px;
+          padding: 4px; margin-bottom: 1.5rem; }
+  .tab  { flex: 1; padding: 8px 16px; border: none; border-radius: 8px;
+          background: transparent; color: var(--muted); cursor: pointer;
+          font-size: 0.82rem; font-weight: 600; transition: all 0.2s; font-family: var(--font); }
+  .tab.active { background: var(--teal); color: white; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── AlphaFold section ── */
+  .af-card { background: var(--surface2); border: 1px solid var(--border);
+             border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+  .af-card h4 { font-size: 0.85rem; font-weight: 700; color: var(--white);
+                margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px; }
+  .af-steps { display: flex; flex-direction: column; gap: 8px; }
+  .af-step  { display: flex; align-items: flex-start; gap: 10px; }
+  .af-step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--teal);
+                 display: flex; align-items: center; justify-content: center;
+                 font-size: 0.7rem; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .af-step-text { font-size: 0.82rem; color: var(--light); }
+  .af-step-text a { color: var(--lav); text-decoration: none; }
+  .af-step-text a:hover { text-decoration: underline; }
+  .ipTM-guide { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .ipTM-chip { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .ipTM-high { background: rgba(34,197,94,0.15); color: var(--green); }
+  .ipTM-mod  { background: rgba(245,158,11,0.15); color: var(--amber); }
+  .ipTM-low  { background: rgba(220,38,38,0.15); color: var(--red); }
+
+  /* ── Footer ── */
+  .footer { text-align: center; padding: 2rem; font-size: 0.75rem; color: var(--muted);
+            border-top: 1px solid var(--border); margin-top: 3rem; }
+
+  /* ── Spinner ── */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3);
+          border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+
+  /* ── Tooltip ── */
+  .tip { position: relative; cursor: help; }
+  .tip::after { content: attr(data-tip); position: absolute; bottom: 125%; left: 50%;
+                transform: translateX(-50%); background: #0d1b2e; border: 1px solid var(--border);
+                border-radius: 8px; padding: 6px 10px; font-size: 0.72rem; color: var(--light);
+                white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.2s;
+                z-index: 10; }
+  .tip:hover::after { opacity: 1; }
+
+  /* ── Empty state ── */
+  .empty { text-align: center; padding: 3rem 2rem; color: var(--muted); }
+  .empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
+  .empty p { font-size: 0.88rem; }
+  .highlight { color: var(--mint); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">🦠</div>
+    <div>
+      <h1>Viral Infection Plausibility Engine</h1>
+      <p>Anish Subedi · Powered by PubMed &amp; UniProt</p>
+    </div>
+  </div>
+  <div class="badge">NO API KEY REQUIRED</div>
+</div>
+
+<div class="container">
+
+  <!-- SEARCH SECTION -->
+  <div class="search-section">
+    <div class="search-title">Analyze virus–cell interaction plausibility</div>
+    <div class="search-sub">
+      Enter a virus and cell type. The engine searches PubMed live, extracts receptors and entry mechanisms,
+      scores infection plausibility, and identifies alternative receptor candidates.
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Virus</label>
+        <input type="text" id="virusInput" placeholder="e.g. HAdV-D37, SARS-CoV-2, HSV-1" value="HAdV-D37">
+      </div>
+      <div class="form-group">
+        <label>Cell Type</label>
+        <input type="text" id="cellInput" placeholder="e.g. corneal epithelial, macrophage" value="corneal epithelial">
+      </div>
+      <button class="btn-run" id="runBtn" onclick="runAnalysis()">
+        <span id="btnIcon">▶</span>
+        <span id="btnText">Analyze</span>
+      </button>
+    </div>
+    <div class="quick-examples">
+      <span style="font-size:0.75rem;color:var(--muted);margin-right:4px;">Try:</span>
+      <div class="example-chip" onclick="setExample('HAdV-D37','corneal epithelial')">HAdV-D37 + corneal epithelial</div>
+      <div class="example-chip" onclick="setExample('SARS-CoV-2','alveolar epithelial')">SARS-CoV-2 + alveolar epithelial</div>
+      <div class="example-chip" onclick="setExample('HSV-1','corneal epithelial')">HSV-1 + corneal epithelial</div>
+      <div class="example-chip" onclick="setExample('Influenza A H1N1','airway epithelial')">Influenza + airway epithelial</div>
+      <div class="example-chip" onclick="setExample('HAdV-C5','HEK293')">HAdV-C5 + HEK293</div>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-section" id="progressSection">
+    <div class="progress-steps" id="progressSteps">
+      <div class="step" id="step1"><div class="step-circle">1</div><div class="step-label">PubMed Search</div></div>
+      <div class="step" id="step2"><div class="step-circle">2</div><div class="step-label">Fetch Abstracts</div></div>
+      <div class="step" id="step3"><div class="step-circle">3</div><div class="step-label">Extract Receptors</div></div>
+      <div class="step" id="step4"><div class="step-circle">4</div><div class="step-label">Mechanism Analysis</div></div>
+      <div class="step" id="step5"><div class="step-circle">5</div><div class="step-label">Confidence Score</div></div>
+    </div>
+    <div class="progress-log" id="progressLog"></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-section" id="resultsSection">
+
+    <!-- Stat row -->
+    <div class="stat-row" id="statRow"></div>
+
+    <!-- Confidence score -->
+    <div id="confidenceBlock"></div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('receptors',this)">🔬 Receptors &amp; Entry</button>
+      <button class="tab" onclick="showTab('mechanism',this)">⚙️ Infection Mechanism</button>
+      <button class="tab" onclick="showTab('papers',this)">📄 Literature</button>
+      <button class="tab" onclick="showTab('alphafold',this)">🧬 AlphaFold Links</button>
+    </div>
+
+    <div class="tab-content active" id="tab-receptors">
+      <div id="receptorBlock"></div>
+    </div>
+    <div class="tab-content" id="tab-mechanism">
+      <div id="mechanismBlock"></div>
+    </div>
+    <div class="tab-content" id="tab-papers">
+      <div id="papersBlock"></div>
+    </div>
+    <div class="tab-content" id="tab-alphafold">
+      <div id="alphafoldBlock"></div>
+    </div>
+
+  </div>
+
+  <!-- Empty state -->
+  <div class="empty" id="emptyState">
+    <div class="empty-icon">🧫</div>
+    <p>Enter a virus and cell type above to begin analysis.<br>
+    The engine will search <span class="highlight">PubMed</span> live and generate a
+    <span class="highlight">plausibility score</span> with receptor candidates.</p>
+  </div>
+
+</div>
+
+<div class="footer">
+  Viral Infection Plausibility Engine · Anish Subedi ·
+  Data from PubMed (NCBI) &amp; UniProt · No API keys · No cost · Built by Anish Subedi
+</div>
+
+<script>
+// ============================================================
+// KNOWLEDGE BASE
+// ============================================================
+
+const KNOWN_RECEPTORS = {
+  'hadv-d': {
+    primary: ['Sialic acid / GD1a','Heparan sulfate proteoglycans','Desmoglein 2','MUC16'],
+    secondary: ['CD46','Lactoferrin receptor','Coagulation factor X','Integrin αvβ3','Integrin αvβ5'],
+    entry: ['Clathrin-mediated endocytosis','Macropinocytosis','Lipid raft-dependent entry'],
+    effects: ['Mucin shedding (MUC16 ectodomain release)','Epithelial barrier disruption','IL-6/IL-8 secretion','HMGB1 release','Subepithelial leukocyte infiltration','Macroautophagy induction'],
+    tissue: 'Corneal epithelial cells, conjunctival cells',
+    confidence_base: 72
+  },
+  'hadv-c': {
+    primary: ['CAR (CXADR)','CD46'],
+    secondary: ['Heparan sulfate proteoglycans','Integrin αvβ3','Integrin αvβ5','Coagulation factor X'],
+    entry: ['Clathrin-mediated endocytosis','Caveolin-dependent endocytosis','Macropinocytosis'],
+    effects: ['Cell lysis','Inflammatory cytokine release','DNA damage response activation','p53 pathway modulation','E1A-mediated transcriptional reprogramming'],
+    tissue: 'Airway epithelial cells, HEK293, liver cells',
+    confidence_base: 85
+  },
+  'hadv': {
+    primary: ['CAR (CXADR)','Sialic acid','CD46'],
+    secondary: ['Heparan sulfate','Integrin αvβ3','Integrin αvβ5','Lactoferrin','Coagulation factor X'],
+    entry: ['Clathrin-mediated endocytosis','Macropinocytosis'],
+    effects: ['Lytic infection','Inflammatory cytokine induction','HMGB1 secretion','Immune evasion via E3 proteins'],
+    tissue: 'Epithelial cells (various), immune cells',
+    confidence_base: 70
+  },
+  'sars-cov-2': {
+    primary: ['ACE2','TMPRSS2'],
+    secondary: ['NRP1','CD147','Furin cleavage site','ASGR1','CD26/DPP4'],
+    entry: ['Membrane fusion at cell surface (TMPRSS2-dependent)','Endosomal entry (cathepsin-dependent)','Spike S1/S2 cleavage by furin'],
+    effects: ['ACE2 downregulation','Cytokine storm (IL-6, IL-1β, TNF-α)','Type I interferon suppression','NLRP3 inflammasome activation','Mitochondrial dysfunction','ER stress'],
+    tissue: 'Alveolar epithelial type II, upper airway, intestinal epithelial',
+    confidence_base: 90
+  },
+  'influenza': {
+    primary: ['α2-3 sialic acid (avian strains)','α2-6 sialic acid (human strains)'],
+    secondary: ['CD26/DPP4','Fibronectin','β-galactosides'],
+    entry: ['Clathrin-mediated endocytosis','Macropinocytosis','pH-dependent membrane fusion in endosome'],
+    effects: ['Apoptosis induction','IFN-β/IFN-α production','NF-κB activation','RIG-I/MDA5 innate sensing','Cytokine storm in severe disease'],
+    tissue: 'Airway epithelial cells, type II pneumocytes',
+    confidence_base: 88
+  },
+  'hsv-1': {
+    primary: ['HVEM (TNFRSF14)','Nectin-1 (PVRL1)','Heparan sulfate proteoglycans'],
+    secondary: ['Nectin-2','3-O-sulfated heparan sulfate','CD111','CD112'],
+    entry: ['Direct membrane fusion at cell surface','Endocytosis followed by membrane fusion','Cell-to-cell spread'],
+    effects: ['Lytic infection of epithelial cells','Latency in neurons','ICP0-mediated immune evasion','Dendritic cell dysfunction','Corneal stromal keratitis'],
+    tissue: 'Corneal epithelium, neurons (TG ganglia), mucosal epithelium',
+    confidence_base: 82
+  },
+  'hiv': {
+    primary: ['CD4','CCR5','CXCR4'],
+    secondary: ['DC-SIGN','Heparan sulfate','Galactosylceramide'],
+    entry: ['Membrane fusion at cell surface','pH-independent gp120/gp41-mediated fusion'],
+    effects: ['CD4+ T cell depletion','Latent reservoir formation','Chronic immune activation','Neuroinflammation','Inflammasome activation'],
+    tissue: 'CD4+ T lymphocytes, macrophages, dendritic cells',
+    confidence_base: 95
+  },
+  'ebola': {
+    primary: ['NPC1','TIM-1 (HAVCR1)'],
+    secondary: ['DC-SIGN','DC-SIGNR','Integrin αvβ3','β1 integrin','Tyro3','Axl','Mer'],
+    entry: ['Macropinocytosis','Clathrin-independent endocytosis','Cathepsin B/L cleavage required in endosome'],
+    effects: ['Massive cytokine release','Coagulation cascade disruption','Hemorrhagic fever','Dendritic cell dysfunction','Macrophage hyperactivation'],
+    tissue: 'Macrophages, dendritic cells, hepatocytes, endothelial cells',
+    confidence_base: 85
+  }
+};
+
+const CELL_RECEPTORS = {
+  'corneal epithelial': ['Sialic acid residues','Heparan sulfate proteoglycans','MUC16 (mucin-16)','CD46','Desmoglein 2','HVEM','Nectin-1','CAR (low)','EGFR','Integrin αvβ3','Integrin αvβ5','TLR2','TLR4','TLR9'],
+  'alveolar epithelial': ['ACE2','TMPRSS2','Sialic acid (α2-6)','Heparan sulfate','NRP1','CD26/DPP4','Integrin αvβ6','RAGE','ICAM-1'],
+  'airway epithelial': ['Sialic acid (α2-6 dominant)','CAR','CD46','Heparan sulfate','ICAM-1','JAM-A','Integrin αvβ6'],
+  'macrophage': ['DC-SIGN','TIM-1','CD14','CD16','CR3','Fcγ receptors','TLR2','TLR4','TLR9','CLEC7A','CD206','CD36'],
+  'hela': ['CAR','Integrin αvβ3','CD46','Heparan sulfate','EGFR','Sialic acid'],
+  'hek293': ['CAR','CD46','Integrin αvβ3','Heparan sulfate','EGFR'],
+  'a549': ['CAR','CD46','Heparan sulfate','Sialic acid','Integrin αvβ5','EGFR','ACE2 (low)'],
+};
+
+const ENTRY_PATHWAYS = {
+  'clathrin': { name: 'Clathrin-mediated endocytosis', description: 'Most common viral entry pathway. Clathrin coat assembles around receptor-virus complex, forms endosome. pH drops → triggers uncoating.' },
+  'macropinocytosis': { name: 'Macropinocytosis', description: 'Large-scale membrane ruffling engulfs virus. Common for large viruses or when primary receptor clustering is needed.' },
+  'fusion': { name: 'Direct membrane fusion', description: 'Viral envelope fuses directly with plasma membrane (enveloped viruses). Requires fusion protein activation by receptor binding.' },
+  'caveolin': { name: 'Caveolin/lipid raft entry', description: 'Caveolae (flask-shaped plasma membrane invaginations) mediate entry. Associated with non-degradative trafficking.' },
+  'endosome': { name: 'Endosomal pH-triggered escape', description: 'Low pH in late endosomes activates viral fusion machinery. Blocked by lysosomotropic agents like chloroquine.' },
+};
+
+const STOPWORDS = new Set([
+  'A','AN','THE','OF','IN','ON','AT','TO','BY','AS','IS','IT','BE','OR','AND','BUT','FOR',
+  'NOT','FROM','WITH','THIS','THAT','WAS','ARE','HAS','HAD','HAVE','BEEN','WERE','WILL',
+  'WOULD','CAN','MAY','COULD','SHOULD','ALSO','BOTH','ALL','ONE','TWO','ITS','OUR','WE',
+  'US','NO','SO','SUCH','THESE','THOSE','THEN','THAN','THEY','THEIR','THERE','WHEN','WHICH',
+  'WHO','HOW','IF','UP','DO','DID','AFTER','BEFORE','INTO','DURING','ONLY','MORE','LESS',
+  'MOST','SOME','ANY','EACH','VERY','WELL','NEW','SAME','CELLS','CELL','VIRUS','VIRAL',
+  'HUMAN','STUDY','DATA','RESULTS','SHOW','SHOWED','FOUND','USED','USING','TREATMENT',
+  'CONTROL','GROUP','MODEL','PROTEIN','GENE','EXPRESSION','INFECTION','INFECTED','ROLE',
+  'MECHANISM','PATHWAY','RESPONSE','ACTIVITY','FUNCTION','LEVEL','LEVELS','BINDING',
+  'ENTRY','REPLICATION','RELEASE','SECRETION','SIGNAL','SIGNALING','PROCESS','RECEPTOR',
+  'SURFACE','MEMBRANE','ASSAY','TEST','ANTIBODY','SERUM','SAMPLE','PATIENT','CLINICAL',
+  'TYPE','TYPES','SPECIES','STRAIN','PRIMARY','SECONDARY','FIGURE','TABLE','SIGNIFICANT',
+  'INCREASE','DECREASE','INDUCED','REQUIRED','POTENTIAL','IMPORTANT','NOVEL','SIMILAR',
+  'PCR','RNA','DNA','MRNA','PBS','BSA','DMEM','GFP','EGFP','RFP','USA','WHO','FDA',
+  'NIH','ET','AL','EG','IE','VS','FIG','NA','ND','NR','NS','NT',
+  'MICE','MOUSE','RAT','PATIENTS','STUDIES','ANALYSIS','COMPARE','COMPARED',
+  'THEREFORE','HOWEVER','ALTHOUGH','DESPITE','BECAUSE','SINCE','WHILE','THUS',
+  'HENCE','INDEED','FURTHER','FINALLY','NOTABLY','TOGETHER','PROVIDE',
+]);
+
+// ============================================================
+// PUBMED API (via CORS proxy for browser use)
+// ============================================================
+
+const NCBI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/';
+const EMAIL = 'anish.subedi488@gmail.com';
+
+async function searchPubMed(query, maxResults = 40) {
+  const params = new URLSearchParams({
+    db: 'pubmed', term: query, retmax: maxResults,
+    retmode: 'json', email: EMAIL, tool: 'ViralPlausibilityEngine'
+  });
+  const r = await fetch(`${NCBI}esearch.fcgi?${params}`);
+  const data = await r.json();
+  return {
+    count: parseInt(data.esearchresult.count),
+    ids:   data.esearchresult.idlist
+  };
+}
+
+async function fetchAbstracts(ids) {
+  if (!ids.length) return [];
+  await sleep(350);
+  const params = new URLSearchParams({
+    db: 'pubmed', id: ids.join(','), rettype: 'abstract',
+    retmode: 'xml', email: EMAIL, tool: 'ViralPlausibilityEngine'
+  });
+  const r    = await fetch(`${NCBI}efetch.fcgi?${params}`);
+  const text = await r.text();
+  const parser = new DOMParser();
+  const xml    = parser.parseFromString(text, 'text/xml');
+  const articles = xml.querySelectorAll('PubmedArticle');
+  const papers = [];
+  articles.forEach(article => {
+    const pmid    = article.querySelector('PMID')?.textContent || 'N/A';
+    const titleEl = article.querySelector('ArticleTitle');
+    const title   = titleEl ? titleEl.textContent.replace(/<[^>]+>/g,'') : 'No title';
+    const parts   = Array.from(article.querySelectorAll('AbstractText'))
+                        .map(e => e.textContent).join(' ');
+    const last    = article.querySelector('Author LastName')?.textContent || '';
+    const first   = article.querySelector('Author ForeName')?.textContent || '';
+    const year    = article.querySelector('PubDate Year')?.textContent || 'N/A';
+    const journal = article.querySelector('Journal Title')?.textContent || 'N/A';
+    papers.push({ pmid, title, abstract: parts, authors: `${last} ${first} et al.`, year, journal });
+  });
+  return papers;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ============================================================
+// RECEPTOR EXTRACTION
+// ============================================================
+
+const MULTIWORD = [
+  'sialic acid','heparan sulfate','chondroitin sulfate','hyaluronic acid',
+  'ganglioside gd1a','ganglioside gm1','ganglioside gt1b','lactoferrin receptor',
+  'coagulation factor x','coxsackievirus adenovirus receptor','desmoglein 2',
+  'tight junction','mucin 16','muc16','decay accelerating factor',
+  'complement receptor','major histocompatibility','polymeric immunoglobulin',
+  'low density lipoprotein receptor','transferrin receptor',
+];
+
+function extractReceptors(papers, virusKey) {
+  const known = getKnownReceptors(virusKey);
+  const knownUp = new Set([...known.primary, ...known.secondary].map(r => r.toUpperCase()));
+  const counts  = {};
+  const contexts = {};
+
+  papers.forEach(p => {
+    const text = (p.title + ' ' + p.abstract).toLowerCase();
+    const found = new Set();
+
+    // Multi-word phrases
+    MULTIWORD.forEach(phrase => {
+      if (text.includes(phrase)) {
+        const key = phrase.toUpperCase();
+        found.add(key);
+        if (!contexts[key]) {
+          const sentences = text.split(/[.!?]/);
+          const s = sentences.find(s => s.includes(phrase) && s.length > 20);
+          if (s) contexts[key] = s.trim().slice(0,150);
+        }
+      }
+    });
+
+    // Known receptors
+    [...known.primary, ...known.secondary].forEach(rec => {
+      if (text.includes(rec.toLowerCase())) {
+        const key = rec.toUpperCase();
+        found.add(key);
+        if (!contexts[key]) {
+          const sentences = text.split(/[.!?]/);
+          const s = sentences.find(s => s.includes(rec.toLowerCase()) && s.length > 20);
+          if (s) contexts[key] = s.trim().slice(0,150);
+        }
+      }
+    });
+
+    // CD markers
+    const cdMatches = (p.title + ' ' + p.abstract).match(/\bCD\d+[a-zA-Z]?\b/gi) || [];
+    cdMatches.forEach(m => { found.add(m.toUpperCase()); });
+
+    // TLR
+    const tlrMatches = (p.title + ' ' + p.abstract).match(/\bTLR\s*\d+\b/gi) || [];
+    tlrMatches.forEach(m => { found.add(m.replace(/\s/g,'').toUpperCase()); });
+
+    // Standard caps abbreviations from title (more reliable than abstract)
+    const capsMatches = p.title.match(/\b[A-Z]{2,8}\d{0,3}\b/g) || [];
+    capsMatches.forEach(m => {
+      if (!STOPWORDS.has(m) && m.length >= 3 && !/^\d+$/.test(m)) found.add(m);
+    });
+
+    found.forEach(entity => {
+      counts[entity] = (counts[entity] || 0) + 1;
+    });
+  });
+
+  // Score with weights
+  const scored = Object.entries(counts).map(([entity, count]) => {
+    let score = count;
+    if (knownUp.has(entity)) score *= 5;
+    else if (MULTIWORD.some(p => p.toUpperCase() === entity)) score *= 3;
+    return { entity, score, count, isKnown: knownUp.has(entity) };
+  });
+
+  scored.sort((a,b) => b.score - a.score);
+  return { receptors: scored, contexts };
+}
+
+function getKnownReceptors(virusKey) {
+  const v = virusKey.toLowerCase();
+  for (const [key, data] of Object.entries(KNOWN_RECEPTORS)) {
+    if (v.includes(key)) return data;
+  }
+  return { primary: [], secondary: [], entry: [], effects: [], tissue: 'Unknown', confidence_base: 40 };
+}
+
+function getCellReceptors(cellType) {
+  const c = cellType.toLowerCase();
+  for (const [key, recs] of Object.entries(CELL_RECEPTORS)) {
+    if (c.includes(key.split(' ')[0]) || c.includes(key)) return recs;
+  }
+  return [];
+}
+
+// ============================================================
+// CONFIDENCE SCORE ENGINE
+// ============================================================
+
+function calculateConfidence(virusKey, cellType, paperCount, receptors, known) {
+  let score = 0;
+  let breakdown = {};
+
+  // 1. Literature evidence (0-40)
+  const litScore = paperCount === 0 ? 0 :
+                   paperCount < 5   ? 15 :
+                   paperCount < 20  ? 25 :
+                   paperCount < 100 ? 35 : 40;
+  score += litScore;
+  breakdown.literature = { score: litScore, max: 40, label: 'Literature evidence' };
+
+  // 2. Receptor overlap with cell type (0-25)
+  const cellRecs = getCellReceptors(cellType).map(r => r.toUpperCase());
+  const virusRecs = [...known.primary, ...known.secondary].map(r => r.toUpperCase());
+  const overlap = virusRecs.filter(r =>
+    cellRecs.some(cr => cr.includes(r.split(' ')[0]) || r.includes(cr.split(' ')[0]))
+  ).length;
+  const recScore = Math.min(25, overlap * 8);
+  score += recScore;
+  breakdown.receptors = { score: recScore, max: 25, label: 'Receptor–cell compatibility' };
+
+  // 3. Evidence in extracted receptors (0-20)
+  const topReceptors = receptors.slice(0,10).filter(r => r.isKnown).length;
+  const extractScore = Math.min(20, topReceptors * 5);
+  score += extractScore;
+  breakdown.extraction = { score: extractScore, max: 20, label: 'Receptor evidence in papers' };
+
+  // 4. Entry pathway known (0-15)
+  const entryScore = known.entry.length > 0 ? Math.min(15, known.entry.length * 5) : 0;
+  score += entryScore;
+  breakdown.entry = { score: entryScore, max: 15, label: 'Entry pathway characterised' };
+
+  const grade = score >= 85 ? 'A' : score >= 70 ? 'B' : score >= 55 ? 'C' : score >= 40 ? 'D' : 'F';
+  const verdict = score >= 85 ? 'Highly Plausible' :
+                  score >= 70 ? 'Plausible' :
+                  score >= 55 ? 'Possible' :
+                  score >= 40 ? 'Uncertain' : 'Unlikely';
+  const color = score >= 70 ? '#22c55e' : score >= 55 ? '#f59e0b' : '#dc2626';
+  const description = score >= 85
+    ? `Strong evidence supports infection of ${cellType} by ${virusKey}. Receptors are expressed on target cells, entry mechanisms are well-characterised, and multiple papers directly document this interaction.`
+    : score >= 70
+    ? `Plausible infection scenario. Primary receptors are likely present on ${cellType} and the literature provides supporting evidence. Some mechanistic details remain to be confirmed.`
+    : score >= 55
+    ? `Possible but uncertain. Limited direct evidence for this specific combination. Receptor expression may be low or inconsistent. Experimental validation needed.`
+    : `Limited evidence for this virus-cell combination. Receptor compatibility is unclear or the cell type may lack key entry factors. This could represent a genuine novel interaction or a dead end.`;
+
+  return { score: Math.round(score), grade, verdict, color, description, breakdown };
+}
+
+// ============================================================
+// UI FUNCTIONS
+// ============================================================
+
+function log(msg) {
+  const logEl = document.getElementById('progressLog');
+  const div = document.createElement('div');
+  div.className = 'log-line';
+  div.textContent = msg;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setStep(n, done = false) {
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById(`step${i}`);
+    el.className = 'step';
+    if (i < n || (done && i <= n)) el.classList.add('done');
+    else if (i === n && !done) el.classList.add('active');
+  }
+}
+
+function showTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  btn.classList.add('active');
+}
+
+function setExample(virus, cell) {
+  document.getElementById('virusInput').value = virus;
+  document.getElementById('cellInput').value  = cell;
+}
+
+function colorForScore(score) {
+  if (score >= 70) return '#22c55e';
+  if (score >= 50) return '#f59e0b';
+  return '#dc2626';
+}
+
+// ============================================================
+// RENDER FUNCTIONS
+// ============================================================
+
+function renderStats(virus, cell, virusCount, cellCount, interCount, paperCount) {
+  document.getElementById('statRow').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-num" style="color:var(--mint)">${interCount.toLocaleString()}</div>
+      <div class="stat-lbl">Papers: Both Together</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:var(--lav)">${virusCount.toLocaleString()}</div>
+      <div class="stat-lbl">Papers: ${virus}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:var(--amber)">${cellCount.toLocaleString()}</div>
+      <div class="stat-lbl">Papers: ${cell}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:var(--coral)">${paperCount}</div>
+      <div class="stat-lbl">Abstracts Analysed</div>
+    </div>
+  `;
+}
+
+function renderConfidence(conf, virus, cell) {
+  const bars = Object.entries(conf.breakdown).map(([,b]) => `
+    <div class="score-bar-row">
+      <div class="score-bar-label tip" data-tip="${b.label}">${b.label}</div>
+      <div class="score-bar-track">
+        <div class="score-bar-fill" style="width:${(b.score/b.max*100).toFixed(0)}%;background:${conf.color}"></div>
+      </div>
+      <div class="score-bar-val">${b.score}/${b.max}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('confidenceBlock').innerHTML = `
+    <div class="confidence-card" style="border:1px solid ${conf.color}40;margin-bottom:1.5rem;">
+      <div class="score-circle" style="background:${conf.color}20;border:3px solid ${conf.color}">
+        <div class="score-number" style="color:${conf.color}">${conf.score}</div>
+        <div class="score-label">/ 100</div>
+        <div class="score-grade" style="color:${conf.color}">Grade ${conf.grade}</div>
+      </div>
+      <div class="confidence-details">
+        <h2 style="color:${conf.color}">${conf.verdict} — ${virus} infecting ${cell}</h2>
+        <p>${conf.description}</p>
+        <div class="score-bars">${bars}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderReceptors(receptors, contexts, virus, cell, known) {
+  const cellRecs = getCellReceptors(cell).map(r => r.toUpperCase());
+  const top = receptors.slice(0, 20).filter(r => !STOPWORDS.has(r.entity));
+
+  const rows = top.map((r, i) => {
+    const isKnown = r.isKnown;
+    const inCell  = cellRecs.some(cr => cr.includes(r.entity.split(' ')[0]) || r.entity.includes(cr.split(' ')[0]));
+    const uniprotUrl = `https://www.uniprot.org/uniprotkb?query=${encodeURIComponent(r.entity)}&reviewed=true`;
+    const context = (contexts[r.entity] || '').slice(0,80);
+    return `
+      <div class="receptor-row ${isKnown?'known':''}">
+        <div class="receptor-rank">${i+1}</div>
+        <div>
+          <div class="receptor-name">${r.entity}</div>
+          ${context ? `<div class="receptor-context">${context}…</div>` : ''}
+        </div>
+        <div class="receptor-score">${r.score} pts</div>
+        <div class="receptor-badge ${isKnown?'badge-known':'badge-candidate'}">
+          ${isKnown ? '★ Known' : 'Candidate'}
+        </div>
+        <div class="receptor-link">
+          <a href="${uniprotUrl}" target="_blank">UniProt →</a>
+          ${inCell ? `<span style="color:var(--green);font-size:0.7rem;display:block">✓ In ${cell}</span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Cell receptor compatibility
+  const cellRecsHtml = getCellReceptors(cell).map(rec => {
+    const virusHas = [...known.primary, ...known.secondary].some(vr =>
+      rec.toUpperCase().includes(vr.split(' ')[0].toUpperCase()) ||
+      vr.toUpperCase().includes(rec.split(' ')[0].toUpperCase())
+    );
+    return `<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.82rem;
+            color:${virusHas ? 'var(--green)' : 'var(--light)'};display:flex;align-items:center;gap:6px;">
+      ${virusHas ? '✓' : '·'} ${rec}
+      ${virusHas ? `<span style="font-size:0.7rem;color:var(--green)">← ${virus} uses this</span>` : ''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('receptorBlock').innerHTML = `
+    <div class="section-title">Receptor Candidates <span>${top.length} identified</span></div>
+    <div class="receptor-grid">${rows}</div>
+    <div class="section-title" style="margin-top:2rem">Surface Receptors on ${cell} <span>from literature</span></div>
+    <div class="card" style="margin-top:0">${cellRecsHtml || '<p style="color:var(--muted);font-size:0.82rem">Cell type not in database — check literature manually</p>'}</div>
+  `;
+}
+
+function renderMechanism(virus, cell, known) {
+  const entryHtml = known.entry.map(e => `<li>${e}</li>`).join('');
+  const effectHtml = known.effects.map(e => `<li>${e}</li>`).join('');
+
+  const cellRecs = getCellReceptors(cell);
+  const matchedRecs = [...known.primary, ...known.secondary].filter(vr =>
+    cellRecs.some(cr => cr.toUpperCase().includes(vr.split(' ')[0].toUpperCase()) || vr.toUpperCase().includes(cr.split(' ')[0].toUpperCase()))
+  );
+
+  document.getElementById('mechanismBlock').innerHTML = `
+    <div class="section-title">Infection Mechanism</div>
+    <div class="mechanism-grid">
+      <div class="mech-card" style="border-top:3px solid var(--teal)">
+        <h4 style="color:var(--teal)">Primary Receptors (${virus})</h4>
+        <ul class="mech-list">${known.primary.map(r=>`<li>${r}</li>`).join('') || '<li>Not characterised — see literature</li>'}</ul>
+      </div>
+      <div class="mech-card" style="border-top:3px solid var(--lav)">
+        <h4 style="color:var(--lav)">Secondary / Co-Receptors</h4>
+        <ul class="mech-list">${known.secondary.map(r=>`<li>${r}</li>`).join('') || '<li>Not characterised</li>'}</ul>
+      </div>
+      <div class="mech-card" style="border-top:3px solid var(--amber)">
+        <h4 style="color:var(--amber)">Entry Pathways</h4>
+        <ul class="mech-list">${entryHtml || '<li>Not characterised — search literature</li>'}</ul>
+      </div>
+      <div class="mech-card" style="border-top:3px solid var(--coral)">
+        <h4 style="color:var(--coral)">Cellular Effects After Infection</h4>
+        <ul class="mech-list">${effectHtml || '<li>Not characterised</li>'}</ul>
+      </div>
+    </div>
+    <div class="section-title" style="margin-top:2rem">Receptor Compatibility: ${virus} → ${cell}</div>
+    <div class="card">
+      ${matchedRecs.length > 0
+        ? `<p style="font-size:0.85rem;color:var(--green);margin-bottom:0.75rem">
+             ✓ ${matchedRecs.length} receptor(s) used by ${virus} are expressed on ${cell}:
+             <strong>${matchedRecs.join(', ')}</strong>
+           </p>`
+        : `<p style="font-size:0.85rem;color:var(--amber);margin-bottom:0.75rem">
+             ⚠ No direct receptor overlap found in database.
+             This may be a novel interaction — or the cell type may use a different receptor isoform.
+           </p>`}
+      <p style="font-size:0.8rem;color:var(--muted)">
+        Note: receptor expression varies by cell state, passage number, and culture conditions.
+        This analysis uses published expression data and may not reflect your specific cell line.
+        Always validate receptor expression experimentally (Western blot, flow cytometry, IF).
+      </p>
+    </div>
+    ${known.tissue ? `
+    <div class="card" style="margin-top:1rem;border-left:3px solid var(--teal)">
+      <p style="font-size:0.82rem;color:var(--light)">
+        <strong style="color:var(--teal)">Known natural tissue tropism for ${virus}:</strong>
+        ${known.tissue}
+      </p>
+    </div>` : ''}
+  `;
+}
+
+function renderPapers(papers) {
+  const html = papers.slice(0,15).map((p,i) => `
+    <div class="paper-item">
+      <div class="paper-title">[${i+1}] ${p.title}</div>
+      <div class="paper-meta">
+        ${p.authors} · ${p.journal} · ${p.year} ·
+        <a href="https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/" target="_blank">
+          PMID ${p.pmid} →
+        </a>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('papersBlock').innerHTML = `
+    <div class="section-title">Top Papers <span>${papers.length} retrieved</span></div>
+    ${html || '<p style="color:var(--muted)">No papers found for this combination.</p>'}
+  `;
+}
+
+function renderAlphaFold(receptors, virus) {
+  const top3 = receptors.filter(r => !STOPWORDS.has(r.entity)).slice(0,4);
+
+  const cards = top3.map(r => {
+    const enc = encodeURIComponent(r.entity);
+    const encV = encodeURIComponent(virus);
+    return `
+      <div class="af-card">
+        <h4>
+          <span style="background:rgba(13,148,136,0.2);padding:3px 10px;border-radius:20px;
+                font-size:0.78rem;color:var(--mint)">Candidate</span>
+          ${r.entity}
+          ${r.isKnown ? '<span style="color:var(--green);font-size:0.78rem">★ Known receptor</span>' : ''}
+        </h4>
+        <div class="af-steps">
+          <div class="af-step">
+            <div class="af-step-num">1</div>
+            <div class="af-step-text">Find receptor sequence on UniProt:
+              <a href="https://www.uniprot.org/uniprotkb?query=${enc}&reviewed=true" target="_blank">
+                Search ${r.entity} on UniProt →
+              </a>
+            </div>
+          </div>
+          <div class="af-step">
+            <div class="af-step-num">2</div>
+            <div class="af-step-text">Find viral fiber/capsid protein:
+              <a href="https://www.uniprot.org/uniprotkb?query=${encV}+fiber+knob&reviewed=true" target="_blank">
+                Search ${virus} fiber protein →
+              </a>
+            </div>
+          </div>
+          <div class="af-step">
+            <div class="af-step-num">3</div>
+            <div class="af-step-text">Check if crystal structure already exists:
+              <a href="https://www.rcsb.org/search?request=%7B%22query%22%3A%7B%22type%22%3A%22terminal%22%2C%22service%22%3A%22full_text%22%2C%22parameters%22%3A%7B%22value%22%3A%22${enc}+adenovirus%22%7D%7D%7D" target="_blank">
+                Search PDB →
+              </a>
+            </div>
+          </div>
+          <div class="af-step">
+            <div class="af-step-num">4</div>
+            <div class="af-step-text">
+              Run free interaction prediction on ColabFold:
+              <a href="https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2.ipynb" target="_blank">
+                Open ColabFold (AlphaFold-Multimer) →
+              </a><br>
+              <span style="color:var(--muted)">In query_sequence: paste [RECEPTOR_SEQ]:[VIRAL_FIBER_SEQ] (colon separates chains)</span>
+            </div>
+          </div>
+          <div class="af-step">
+            <div class="af-step-num">5</div>
+            <div class="af-step-text">Interpret your ipTM score:
+              <div class="ipTM-guide">
+                <div class="ipTM-chip ipTM-high">ipTM &gt; 0.8 — High confidence binding</div>
+                <div class="ipTM-chip ipTM-mod">ipTM 0.6–0.8 — Moderate confidence</div>
+                <div class="ipTM-chip ipTM-low">ipTM &lt; 0.6 — Unlikely interaction</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('alphafoldBlock').innerHTML = `
+    <div class="section-title">AlphaFold-Multimer Prediction Workflow <span>free · no GPU needed</span></div>
+    <div class="card" style="margin-bottom:1.5rem;border-left:3px solid var(--amber)">
+      <p style="font-size:0.83rem;color:var(--light)">
+        <strong style="color:var(--amber)">What AlphaFold-Multimer predicts:</strong>
+        Whether two proteins physically interact and with what confidence.
+        It does NOT predict binding affinity (Kd) — just structural compatibility.
+        An ipTM > 0.7 is worth pursuing for wet-lab validation.
+      </p>
+    </div>
+    ${cards}
+  `;
+}
+
+// ============================================================
+// MAIN ANALYSIS FUNCTION
+// ============================================================
+
+async function runAnalysis() {
+  const virus    = document.getElementById('virusInput').value.trim();
+  const cellType = document.getElementById('cellInput').value.trim();
+  if (!virus || !cellType) { alert('Please enter both a virus name and cell type.'); return; }
+
+  // UI state
+  document.getElementById('emptyState').style.display    = 'none';
+  document.getElementById('resultsSection').style.display = 'none';
+  document.getElementById('progressSection').style.display = 'block';
+  document.getElementById('progressLog').innerHTML = '';
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('btnIcon').innerHTML = '<span class="spin"></span>';
+  document.getElementById('btnText').textContent = 'Analysing…';
+
+  try {
+    // STEP 1: Search PubMed
+    setStep(1);
+    log(`Searching PubMed for "${virus}"…`);
+    const virusResult = await searchPubMed(`"${virus}"[Title/Abstract]`, 3);
+    log(`  → ${virusResult.count.toLocaleString()} papers on ${virus}`);
+    await sleep(400);
+
+    log(`Searching PubMed for "${cellType}"…`);
+    const cellResult = await searchPubMed(`"${cellType}"[Title/Abstract]`, 3);
+    log(`  → ${cellResult.count.toLocaleString()} papers on ${cellType}`);
+    await sleep(400);
+
+    log(`Searching interaction: "${virus}" + "${cellType}"…`);
+    const interResult = await searchPubMed(
+      `"${virus}"[Title/Abstract] AND "${cellType}"[Title/Abstract]`, 50
+    );
+    log(`  → ${interResult.count} direct interaction papers found`);
+    await sleep(400);
+
+    log(`Searching receptor papers for ${virus}…`);
+    const recResult = await searchPubMed(
+      `"${virus}" AND (receptor OR binding OR entry OR attachment OR glycan)`, 50
+    );
+    log(`  → ${recResult.count} receptor-related papers`);
+
+    setStep(1, true); setStep(2);
+
+    // STEP 2: Fetch abstracts
+    log('Fetching abstracts…');
+    const allIds = [...new Set([...interResult.ids, ...recResult.ids])].slice(0, 60);
+    if (!allIds.length) {
+      log('⚠ No papers found. Try broader terms.');
+      return;
+    }
+    const papers = await fetchAbstracts(allIds);
+    log(`  → ${papers.length} abstracts retrieved`);
+
+    setStep(2, true); setStep(3);
+
+    // STEP 3: Extract receptors
+    log('Extracting receptor candidates…');
+    const virusKey = virus;
+    const { receptors, contexts } = extractReceptors(papers, virusKey);
+    const knownData = getKnownReceptors(virusKey);
+    log(`  → ${receptors.length} candidates identified`);
+    log(`  → Top candidate: ${receptors[0]?.entity || 'none'} (score: ${receptors[0]?.score || 0})`);
+
+    setStep(3, true); setStep(4);
+
+    // STEP 4: Mechanism analysis
+    log('Analysing infection mechanism…');
+    await sleep(300);
+    log(`  → Entry pathways: ${knownData.entry.length} characterised`);
+    log(`  → Cellular effects: ${knownData.effects.length} documented`);
+    const cellRecs = getCellReceptors(cellType);
+    log(`  → ${cellType} receptor profile: ${cellRecs.length} known receptors`);
+
+    setStep(4, true); setStep(5);
+
+    // STEP 5: Confidence score
+    log('Calculating plausibility score…');
+    const conf = calculateConfidence(virusKey, cellType,
+                    interResult.count, receptors, knownData);
+    log(`  → Score: ${conf.score}/100 (${conf.verdict})`);
+
+    setStep(5, true);
+    log('✓ Analysis complete!');
+    await sleep(600);
+
+    // ── RENDER RESULTS ────────────────────────────────────────
+    document.getElementById('progressSection').style.display = 'none';
+    document.getElementById('resultsSection').style.display = 'block';
+
+    renderStats(virus, cellType, virusResult.count, cellResult.count,
+                interResult.count, papers.length);
+    renderConfidence(conf, virus, cellType);
+    renderReceptors(receptors, contexts, virus, cellType, knownData);
+    renderMechanism(virus, cellType, knownData);
+    renderPapers(papers);
+    renderAlphaFold(receptors, virus);
+
+  } catch (err) {
+    log(`ERROR: ${err.message}`);
+    log('Check your internet connection or try again.');
+    console.error(err);
+  } finally {
+    document.getElementById('runBtn').disabled = false;
+    document.getElementById('btnIcon').textContent = '▶';
+    document.getElementById('btnText').textContent = 'Analyze';
+  }
+}
+
+// Allow Enter key to trigger analysis
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' &&
+      (document.activeElement === document.getElementById('virusInput') ||
+       document.activeElement === document.getElementById('cellInput'))) {
+    runAnalysis();
+  }
+});
+</script>
+</body>
+</html>
